@@ -12,6 +12,14 @@ ITEM_STATS_GRID_REGION = {
     "height": 1540  # Height of the grid area
 }
 
+# Define the counter increment button region
+COMBINE_BUTTON_REGION = {
+    "top": 450,
+    "left": 1520,
+    "width": 190,  # 1076 - 960
+    "height": 50   # 261 - 217
+}
+
 RUNES_PASSED_GRID_REGION = {
     "top": 600,  # Adjust based on your screen position
     "left": 420,  # Adjust based on your screen position
@@ -186,9 +194,13 @@ def capture_min_max_grid(sct):
     
     return img_min, img_max
 
-def capture_images():
-    with mss.mss() as sct:
-        item_img = capture_item_grid(sct)
-        # rune_grid = capture_rune_grid(sct)
-        min_img, max_img = capture_min_max_grid(sct)
-        return item_img, min_img, max_img
+def is_click_combine_region(x, y):
+    """Check if a click is within the counter increment region."""
+    return (COMBINE_BUTTON_REGION["left"] <= x <= COMBINE_BUTTON_REGION["left"] + COMBINE_BUTTON_REGION["width"] and
+            COMBINE_BUTTON_REGION["top"] <= y <= COMBINE_BUTTON_REGION["top"] + COMBINE_BUTTON_REGION["height"])
+
+def capture_images(sct):
+    item_img = capture_item_grid(sct)
+    # rune_grid = capture_rune_grid(sct)
+    min_img, max_img = capture_min_max_grid(sct)
+    return item_img, min_img, max_img

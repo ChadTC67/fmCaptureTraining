@@ -1,4 +1,8 @@
-def validateData(min, max, reliquat, caracValues, caracIds, runeId, runeWeight):
+import json
+import os
+from datetime import datetime
+
+def validateData(min, max, reliquat, caracValues, caracIds):
     """
     Validates the data for rune serialization.
     
@@ -8,8 +12,6 @@ def validateData(min, max, reliquat, caracValues, caracIds, runeId, runeWeight):
         reliquat: Reliquat value
         caracValues: List of characteristic values
         caracIds: List of characteristic IDs
-        runeId: Rune ID
-        runeWeight: Rune weight
         
     Returns:
         str: Error message if data is invalid, None otherwise
@@ -50,31 +52,71 @@ def validateData(min, max, reliquat, caracValues, caracIds, runeId, runeWeight):
     
     return None
 
-def formatData(min, max, reliquat, caracValues, caracIds, runeId, runeWeight):
+def formatData(reliquat, caracValues, caracIds, runeId, runeWeight, min=None, max=None):
 
-    validData = validateData(min, max, reliquat, caracValues, caracIds, runeId, runeWeight)
+    # validData = validateData(min, max, reliquat, caracValues, caracIds)
 
-    if validData is not None:
-        return None
+    # while len(caracValues) < 13:
+    #     caracValues.append(None)
+
+    # if validData is not None:
+    #     return None
     
     # Format the data to be serialized
     data = [
-        [caracIds[0], min[0], max[0], caracValues[0]],
-        [caracIds[1], min[1], max[1], caracValues[1]],
-        [caracIds[2], min[2], max[2], caracValues[2]],
-        [caracIds[3], min[3], max[3], caracValues[3]],
-        [caracIds[4], min[4], max[4], caracValues[4]],
-        [caracIds[5], min[5], max[5], caracValues[5]],
-        [caracIds[6], min[6], max[6], caracValues[6]],
-        [caracIds[7], min[7], max[7], caracValues[7]],
-        [caracIds[8], min[8], max[8], caracValues[8]],
-        [caracIds[9], min[9], max[9], caracValues[9]],
-        [caracIds[10], min[10], max[10], caracValues[10]],
-        [caracIds[11], min[11], max[11], caracValues[11]],
-        [caracIds[12], min[12], max[12], caracValues[12]],
+        caracValues,
         runeId,
         runeWeight,
         reliquat
     ]
-    # print("Data:", data)
     return data
+
+def saveToJsonFile(data, filename, caracIds, min=None, max=None):
+    """
+    Saves the formatted data to a JSON file.
+    If the file already exists, the new data is appended as a new entry.
+    
+    Args:
+        data: The data to save
+        filename: The name of the JSON file (default: rune_data.json)
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(filename) or '.', exist_ok=True)
+        
+        # Check if file exists and load existing data
+        existing_data = []
+        jsonData = {
+            "data": existing_data,
+            "caracIds": caracIds,
+        }
+        if os.path.exists(filename) and os.path.getsize(filename) > 0:
+            try:
+                with open(filename, 'r') as file:
+                    jsonData = json.load(file)
+            except json.JSONDecodeError:
+                # If the file is corrupted, we'll start fresh
+                print(f"Warning: {filename} is corrupted, creating new file")
+                jsonData = {
+                    "min": min,
+                    "max": max,
+                    "data": existing_data
+                }
+        
+        # Add the new entry and save
+        jsonData["data"].append(data)
+        if min is not None:
+            jsonData["min"] = min
+            jsonData["max"] = max
+        
+        with open(filename, 'w') as file:
+            json.dump(jsonData, file, indent=2)
+        
+        print(f"Data saved to {filename}")
+        return True
+    except Exception as e:
+        print(f"Error saving to JSON file: {str(e)}")
+        return False

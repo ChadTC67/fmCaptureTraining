@@ -1,5 +1,7 @@
 import re
-from rune_data import runeNames, runeNumbers, caracId, runeIds
+from capture_functions import COMBINE_BUTTON_REGION
+from rune_data import runeNumbers, caracId, runeIds
+
 
 def calculate_grid_item(x, y):
     """
@@ -72,6 +74,9 @@ def matchRuneIdByPosition(x, y, caracs):
         int: A rune ID if a match is found, or None if no match is found.
     """
     
+    if (COMBINE_BUTTON_REGION["left"] <= x <= COMBINE_BUTTON_REGION["left"] + COMBINE_BUTTON_REGION["width"] and
+            COMBINE_BUTTON_REGION["top"] <= y <= COMBINE_BUTTON_REGION["top"] + COMBINE_BUTTON_REGION["height"]):
+        return 38
 
     grid_item = calculate_grid_item(x, y)
     if grid_item is None:
