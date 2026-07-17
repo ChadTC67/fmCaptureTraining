@@ -1,45 +1,39 @@
-import mss
+import time
+from pathlib import Path
+
 import cv2
 import numpy as np
-import time
-import os
 
-# Define the region of the screen where the grid is located
 ITEM_STATS_GRID_REGION = {
-    "top": 350,  # Adjust based on your screen position
-    "left": 1020,  # Adjust based on your screen position
-    "width": 820,  # Width of the grid area
-    "height": 1540  # Height of the grid area
+    "top": 350,
+    "left": 1020,
+    "width": 820,
+    "height": 1540,
 }
 
-# Define the counter increment button region
 COMBINE_BUTTON_REGION = {
     "top": 450,
     "left": 1520,
-    "width": 190,  # 1076 - 960
-    "height": 50   # 261 - 217
+    "width": 190,
+    "height": 50,
 }
 
 RUNES_PASSED_GRID_REGION = {
-    "top": 600,  # Adjust based on your screen position
-    "left": 420,  # Adjust based on your screen position
-    "width": 60,  # Adjust based on your screen position
-    "height": 1249  # Height of the grid area
+    "top": 600,
+    "left": 420,
+    "width": 60,
+    "height": 1249,
 }
 
-# Folder to save captured images
-OUTPUT_FOLDER = "captured_grids"
+OUTPUT_FOLDER = Path("captured_grids")
 
-# Background color in RGB
 BACKGROUND_RGB = np.array([58, 61, 88], dtype=np.uint8)  # #3A3D58
-
-# Background color in RGB and HSV
 BACKGROUND_HSV = cv2.cvtColor(np.uint8([[BACKGROUND_RGB]]), cv2.COLOR_RGB2HSV)[0][0]
 
-# HSV range for background removal
 hue_range = 10
 lower_bound = np.array([BACKGROUND_HSV[0] - hue_range, 30, 30], dtype=np.uint8)
 upper_bound = np.array([BACKGROUND_HSV[0] + hue_range, 255, 255], dtype=np.uint8)
+
 
 def find_last_rune_row(rune_mask):
     """Finds the last row containing a rune in the mask."""
@@ -48,48 +42,42 @@ def find_last_rune_row(rune_mask):
             return y
     return None
 
+
 def crop_last_rune(rune_log, last_rune_y, rune_height=60):
     """Crops the last rune from the rune log image."""
-    start_y = max(0, last_rune_y - rune_height + 1)  # Prevent out-of-bounds cropping
-    return rune_log[start_y:last_rune_y+8, :]
+    start_y = max(0, last_rune_y - rune_height + 1)
+    return rune_log[start_y:last_rune_y + 8, :]
+
 
 def capture_item_grid(sct):
     stats_screenshot = sct.grab(ITEM_STATS_GRID_REGION)
 
-    # Convert to an OpenCV image
     img_item = np.array(stats_screenshot)
     img_item = cv2.cvtColor(img_item, cv2.COLOR_BGRA2BGR)
 
-    # Define the color range to be replaced (D5D6DC with slight variations)
-    # lower_color = np.array([200, 200, 210], dtype=np.uint8)  # Lower bound for BGR
-    # upper_color = np.array([220, 220, 230], dtype=np.uint8)  # Upper bound for BGR
-
-    # # New color (90E052)
-    # new_color = np.array([255, 255, 255], dtype=np.uint8)  # BGR format of white color
-
-    # # Create a mask for the color range
-    # mask = cv2.inRange(img_item, lower_color, upper_color)
-
-    # # Replace the color
-    # img_item[mask != 0] = new_color
-
-    # Optional: Preprocess the image (grayscale)
     img_item = cv2.cvtColor(img_item, cv2.COLOR_BGR2GRAY)
 
     # Cover the stats icons
-    rectLeftPadding = 0
-    rectTopPadding = 270
-    rectWidth = 375
-    rectHeight = img_item.shape[0]  # Image height
-    img_Item_Stats_Reliquat = cv2.rectangle(img_item, (rectLeftPadding, rectTopPadding), (rectWidth, rectHeight), (255, 255, 255), -1)
+    rect_left_padding = 0
+    rect_top_padding = 270
+    rect_width = 375
+    rect_height = img_item.shape[0]
+    img_item_stats_reliquat = cv2.rectangle(
+        img_item,
+        (rect_left_padding, rect_top_padding),
+        (rect_width, rect_height),
+        (255, 255, 255),
+        -1,
+    )
 
-    # Save the processed image
+    OUTPUT_FOLDER.mkdir(exist_ok=True)
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    item_path = os.path.join(OUTPUT_FOLDER, f"item_{timestamp}.png")
+    item_path = OUTPUT_FOLDER / f"item_{timestamp}.png"
 
-    cv2.imwrite(item_path, img_Item_Stats_Reliquat)
+    cv2.imwrite(str(item_path), img_item_stats_reliquat)
 
-    return img_Item_Stats_Reliquat
+    return img_item_stats_reliquat
+
 
 def capture_rune_grid(sct):
     runes_passed_screenshot = sct.grab(RUNES_PASSED_GRID_REGION)
@@ -109,25 +97,20 @@ def capture_rune_grid(sct):
         print("No rune detected")
         return None
 
-    last_rune = crop_last_rune(img_rune_passed, last_rune_y)
+    return crop_last_rune(img_rune_passed, last_rune_y)
 
-    # Save the processed image
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    rune_path = os.path.join(OUTPUT_FOLDER, f"rune_passed_{timestamp}.png")
-
-    # cv2.imwrite(rune_path, img_rune_passed)
-
-    return last_rune
 
 def apply_clahe(img):
     """Apply CLAHE to enhance contrast."""
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
     return clahe.apply(img)
 
+
 def increase_brightness(img, value=50):
     """Increase brightness by adding a constant value."""
     img = cv2.convertScaleAbs(img, alpha=1, beta=value)
     return img
+
 
 def capture_min_max_grid(sct):
     """Captures the min/max values grid region from the screen and enhances the images."""
@@ -136,14 +119,14 @@ def capture_min_max_grid(sct):
         "top": 620,
         "left": 1050,
         "width": 100,
-        "height": 1240
+        "height": 1240,
     }
 
     MAX_GRID_REGION = {
         "top": 620,
         "left": 1191,
         "width": 110,
-        "height": 1240
+        "height": 1240,
     }
     
     min_screenshot = sct.grab(MIN_GRID_REGION)
@@ -184,23 +167,24 @@ def capture_min_max_grid(sct):
     img_min = cv2.threshold(img_min, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
     img_max = cv2.threshold(img_max, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
-    # Save the processed images
+    OUTPUT_FOLDER.mkdir(exist_ok=True)
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    min_path = os.path.join(OUTPUT_FOLDER, f"min_{timestamp}.png")
-    max_path = os.path.join(OUTPUT_FOLDER, f"max_{timestamp}.png")
+    min_path = OUTPUT_FOLDER / f"min_{timestamp}.png"
+    max_path = OUTPUT_FOLDER / f"max_{timestamp}.png"
     
-    cv2.imwrite(min_path, img_min)
-    cv2.imwrite(max_path, img_max)
+    cv2.imwrite(str(min_path), img_min)
+    cv2.imwrite(str(max_path), img_max)
     
     return img_min, img_max
+
 
 def is_click_combine_region(x, y):
     """Check if a click is within the counter increment region."""
     return (COMBINE_BUTTON_REGION["left"] <= x <= COMBINE_BUTTON_REGION["left"] + COMBINE_BUTTON_REGION["width"] and
             COMBINE_BUTTON_REGION["top"] <= y <= COMBINE_BUTTON_REGION["top"] + COMBINE_BUTTON_REGION["height"])
 
+
 def capture_images(sct):
     item_img = capture_item_grid(sct)
-    # rune_grid = capture_rune_grid(sct)
     min_img, max_img = capture_min_max_grid(sct)
     return item_img, min_img, max_img

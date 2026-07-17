@@ -1,6 +1,10 @@
 import re
 from rune_data import caracId
 
+
+CHARACTERISTICS_BY_LENGTH = sorted(caracId.items(), key=lambda item: len(item[0]), reverse=True)
+
+
 def extract_reliquat_effets(text):
     reliquat = None
     effets = []
@@ -29,7 +33,7 @@ def extract_reliquat_effets(text):
                 
                 # Match the effect name to caracId
                 carac_id = None
-                for characteristic, c_id in caracId.items():
+                for characteristic, c_id in CHARACTERISTICS_BY_LENGTH:
                     if characteristic.lower() in effect_name.lower():
                         carac_id = c_id
                         break

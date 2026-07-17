@@ -1,6 +1,5 @@
-import re
 from capture_functions import COMBINE_BUTTON_REGION
-from rune_data import runeNumbers, caracId, runeIds
+from rune_data import runeIds
 
 
 def calculate_grid_item(x, y):
@@ -23,7 +22,6 @@ def calculate_grid_item(x, y):
     num_rows = 13
     num_cols = 3
 
-    # Check if the click is within the grid boundaries
     if not (grid_start_x <= x <= grid_start_x + (box_width + padding_x) * num_cols - padding_x):
         if x < grid_start_x:
             print(f"Click x-coordinate {x} is left of the grid boundaries.")
@@ -37,27 +35,23 @@ def calculate_grid_item(x, y):
             print(f"Click y-coordinate {y} is below the grid boundaries.")
         return None
 
-    # Calculate the row and column
     col = (x - grid_start_x) // (box_width + padding_x)
     row = (y - grid_start_y) // (box_height + padding_y)
 
-    # Calculate the exact x and y coordinates of the top-left corner of the cell
     cell_start_x = grid_start_x + col * (box_width + padding_x)
     cell_start_y = grid_start_y + row * (box_height + padding_y)
 
     # Check if the click is within the cell's box
     if not (cell_start_x <= x <= cell_start_x + box_width and
-            cell_start_y <= y <= cell_start_y + box_height+1):
+            cell_start_y <= y <= cell_start_y + box_height + 1):
         print("Clicked between grid items.")
         return None
 
-    # Check if the calculated row and column are within the grid dimensions
     if 0 <= row < num_rows and 0 <= col < num_cols:
         return (row, col)
-    else:
-        print(f"Calculated row {row} or column {col} is outside the grid dimensions.")
-        return None
-    
+
+    print(f"Calculated row {row} or column {col} is outside the grid dimensions.")
+    return None
 
 
 
@@ -86,12 +80,18 @@ def matchRuneIdByPosition(x, y, caracs):
     print(f"Clicked on grid item: {grid_item}")
     row, col = grid_item
 
-    if row <= len(caracs):
-        currentCaracValue, currentCaracId = caracs[row]
-        for caracId, runeId in runeIds.items():
-            if currentCaracId == caracId:
-                return runeId[col]
-        print(f"No rune found for carac {currentCaracId}.")
+    if row >= len(caracs):
+        print(f"Clicked row {row} but only {len(caracs)} characteristics were detected.")
+        return None
+
+    currentCaracValue, currentCaracId = caracs[row]
+    for caracId, runeId in runeIds.items():
+        if currentCaracId == caracId:
+            if col >= len(runeId):
+                print(f"Column {col} is not available for carac {currentCaracId}.")
+                return None
+            return runeId[col]
+
+    print(f"No rune found for carac {currentCaracId}.")
 
     return None
-

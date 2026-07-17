@@ -1,72 +1,97 @@
+import argparse
 import json
-import os
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, classification_report
 import pickle
+from pathlib import Path
 
-params = {
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+
+DEFAULT_DATA_DIR = Path("fmData/preprocessedData")
+DEFAULT_MODEL_FILE = Path("model.pkl")
+DEFAULT_SCALER_FILE = Path("scaler.pkl")
+
+TRAINING_PARAMS = {
     "test_size": 0.2,
     "random_state_split": 42,
     "random_state_model": 55,
-    "model_file": 'model.pkl',
-    "scaler_file": 'scaler.pkl'
 }
 
-def train_model_from_processed_data(folder_path):
-    """
-    Trains a RandomForest model from the processed JSON files.
 
-    Args:
-        folder_path: Path to the folder containing processed JSON files.
-    """
+def train_model_from_processed_data(
+    folder_path=DEFAULT_DATA_DIR,
+    model_file=DEFAULT_MODEL_FILE,
+    scaler_file=DEFAULT_SCALER_FILE,
+):
+    """Train a RandomForest model from processed JSON capture files."""
+    folder = Path(folder_path)
     all_features = []
     all_targets = []
 
-    for filename in os.listdir(folder_path):
-        if filename.startswith("processed_") and filename.endswith(".json"):
-            file_path = os.path.join(folder_path, filename)
-            try:
-                with open(file_path, 'r') as f:
-                    reconstructed_data = json.load(f)
+    for file_path in sorted(folder.glob("processed_*.json")):
+        try:
+            with file_path.open("r") as file:
+                reconstructed_data = json.load(file)
 
-                for features, target in reconstructed_data:
-                    all_features.append(features)
-                    all_targets.append(target)
-
-            except Exception as e:
-                print(f"Error processing {file_path}: {e}")
+            for features, target in reconstructed_data:
+                all_features.append(features)
+                all_targets.append(target)
+        except Exception as exc:
+            print(f"Error processing {file_path}: {exc}")
 
     if not all_features:
-        print("No valid processed data found.")
-        return
+        raise ValueError(f"No valid processed data found in {folder}")
 
-    X = np.array(all_features)
+    x = np.array(all_features)
     y = np.array(all_targets)
 
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    x_scaled = scaler.fit_transform(x)
 
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=params["test_size"], random_state=params["random_state_split"])
+    x_train, x_test, y_train, y_test = train_test_split(
+        x_scaled,
+        y,
+        test_size=TRAINING_PARAMS["test_size"],
+        random_state=TRAINING_PARAMS["random_state_split"],
+    )
 
-    model = RandomForestClassifier(random_state=params["random_state_model"])
-    model.fit(X_train, y_train)
+    model = RandomForestClassifier(random_state=TRAINING_PARAMS["random_state_model"])
+    model.fit(x_train, y_train)
 
-    y_pred = model.predict(X_test)
-
+    y_pred = model.predict(x_test)
     accuracy = accuracy_score(y_test, y_pred)
     report = classification_report(y_test, y_pred, zero_division=1)
 
     print(f"Accuracy: {accuracy}")
     print("Classification Report:\n", report)
 
-    with open(params["model_file"], 'wb') as model_file:
-        pickle.dump(model, model_file)
-    with open(params["scaler_file"], 'wb') as scaler_file:
-        pickle.dump(scaler, scaler_file)
+    model_path = Path(model_file)
+    scaler_path = Path(scaler_file)
+    with model_path.open("wb") as file:
+        pickle.dump(model, file)
+    with scaler_path.open("wb") as file:
+        pickle.dump(scaler, file)
 
-# Example Usage for script 2:
-folder_path = "./fmData/preprocessedData"  # Replace with your data folder path
-train_model_from_processed_data(folder_path)
+    print(f"Saved model to {model_path}")
+    print(f"Saved scaler to {scaler_path}")
+    return accuracy, report
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train a RandomForest model from processed FM capture data.")
+    parser.add_argument(
+        "--data-dir",
+        default=DEFAULT_DATA_DIR,
+        help="Directory containing processed_*.json files.",
+    )
+    parser.add_argument("--model-file", default=DEFAULT_MODEL_FILE, help="Output path for the trained model.")
+    parser.add_argument("--scaler-file", default=DEFAULT_SCALER_FILE, help="Output path for the fitted scaler.")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    train_model_from_processed_data(args.data_dir, args.model_file, args.scaler_file)
